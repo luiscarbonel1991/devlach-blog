@@ -7,12 +7,11 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'DevLach',
-  tagline: 'Dinosaurs are cool',
   url: 'https://your-docusaurus-test-site.com',
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/DevLach.png',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -64,11 +63,6 @@ const config = {
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
-        title: 'DevLach',
-        logo: {
-          alt: 'DevLach Logo',
-          src: 'img/logo.svg',
-        },
         items: [
         /*   {
             type: 'doc',
@@ -76,7 +70,7 @@ const config = {
             position: 'left',
             label: 'Tutorial',
           }, */
-          {to: '/blog', label: 'Articules', position: 'left'},
+          {to: '/blog', label: 'Blog', position: 'left'},
           {
             href: 'https://github.com/DevLach',
             label: 'GitHub',
@@ -96,23 +90,15 @@ const config = {
               },
             ],
           }, */
-          /* {
+         {
             title: 'Community',
             items: [
               {
-                label: 'Stack Overflow',
-                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-              },
-              {
                 label: 'Discord',
-                href: 'https://discordapp.com/invite/docusaurus',
-              },
-              {
-                label: 'Twitter',
-                href: 'https://twitter.com/docusaurus',
+                href: 'https://discord.gg/wF7uvUQn9t',
               },
             ],
-          }, */
+          },
           {
             title: 'More',
             items: [
@@ -123,6 +109,10 @@ const config = {
               {
                 label: 'GitHub',
                 href: 'https://github.com/DevLach',
+              },
+              {
+                label: 'Deployed in Vercel',
+                href: 'https://vercel.com/dashboard',
               },
             ],
           },
