@@ -8,9 +8,9 @@ tags: [kotlin, coroutines, async, suspend]
 
 When developing applications we often want our functions to behave asynchronously or non-blocking, to ensure this there are many mechanisms depending on the language you use. In this article we are going to make an introduction of how Kotlin solves this issue in a very elegant way through its coroutines.
 
-Coroutines are threads ? Ummm, the answer is nooo, coroutines and threads are similar in that they can be executed simultaneously and they need a block of code for their construction. But the truth is that a coroutine is not linked to any particular thread, in fact when we launch a coroutine it suspends its execution in a thread and when it has the result ready it can be resumed in any of the free threads, not necessarily in the thread where it started its execution.
+Are coroutines  threads ? Ummm, the answer is nooo, coroutines and threads are similar in that they can be executed simultaneously and they need a block of code for their construction. But the truth is that a coroutine is not linked to any particular thread, in fact when we launch a coroutine it suspends its execution in a thread and when it has the result ready it can be resumed in any of the free threads, not necessarily in the thread where it started its execution.
 
-Next we are going to start from a requirement that usually appear when we develop in enterprise environments.
+Next we are going to start from a requirement that usually appears when we develop in enterprise environments.
 
 Imagine that you are asked to obtain the information of a Profile with its basic information (UserInfo) and the last 10 web sites where it was (TrackinInfo).
 
@@ -105,7 +105,7 @@ ConcurrentTime : 1549
 Now it's better, as we see ConcurrentTime : 1549, but how could we improve our processing time... That's because of the coroutines, let's see what changes we made.
 
 First our business functions:
-*findUserInfo*, *findTrackingInfo* and *getProfile* are now marked as **suspend** functions, but this is because instead of using Thread.sleep we use delay (This function delays coroutine for a given time without blocking a thread and resumes it after a specified time), which being a suspend function then the function that uses it must also be a suspend function.
+*findUserInfo*, *findTrackingInfo* and *getProfile* are now marked as **suspend** functions, but this is because instead of using *Thread.sleep* we use *delay* (This function delays coroutine for a given time without blocking a thread and resumes it after a specified time), which being a suspend function then the function that uses it must also be a suspend function.
 
 On the other hand we see something different in getProfile, now we make our functions findUserInfo and findTrackingInfo to be inside launch{....} and with this we tell it to execute concurrently.
 
