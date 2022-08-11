@@ -113,7 +113,7 @@ On the other hand we see something different in getProfile, now we make our func
 val user = async { findUserInfo(id) }
 val trackingInfo = async { findTrackingInfo(id) }
 ```
-Finally, to obtain the result of both then we call **await** (Awaits for completion of this value without blocking a thread and resumes when deferred computation is complete).
+Finally, to obtain both results we call **await** (Awaits for completion of this value without blocking a thread and resumes when deferred computation is complete).
 We can also see the **runBlocking** function which is nothing more than a coroutine builder.
 
 As I'm a bit picky about my code structure and organization, we'll try to improve this example. 
