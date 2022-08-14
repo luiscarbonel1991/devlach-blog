@@ -118,6 +118,153 @@ We can also see the **runBlocking** function which is nothing more than a corout
 
 As I'm a bit picky about my code structure and organization, we'll try to improve this example. 
 
+First let's move the functions *findUserinfo* and *finTrackingInfo* to repositories.
+
+```kotlin
+class UserRepository {
+    suspend fun findUserInfo(id: Int): UserInfo? {
+        delay(1500) // Not blocking thread
+        return users[id]
+    }
+}
+
+class TrackingRepository {
+    suspend fun findTrackingInfo(id: Int): TrackingInfo? {
+        delay(1500) // Not blocking thread
+        return tracking[id]
+    }
+}
+```
+Now we are going to create a helper class to handle our own scope and in this way to execute any
+suspend function with async.
+
+```kotlin
+object CoroutineUtils {
+    private val defaultScope = CoroutineScope(Dispatchers.IO + CoroutineName("General Purpose")) // Default scope
+    suspend fun <T> runAsync( block: suspend () -> T) = defaultScope.async { block() }
+}
+```
+
+Now we are going to create a service that will have the logic to obtain the profile information.
+
+```kotlin
+class ProfileService(private val userRepository: UserRepository, private val trackingRepository: TrackingRepository) {
+    
+    suspend fun getProfile(id: Int): Profile {
+        val userInfo = CoroutineUtils.runAsync { userRepository.findUserInfo(id) }
+        val trackingInfo = CoroutineUtils.runAsync { trackingRepository.findTrackingInfo(id) }
+        return Profile(userinfo = userInfo.await(), trackingInfo = trackingInfo.await())
+    }
+}
+```
+
+ProfileService receives both repositories via contructor and now we can see our business functions that are called by each one of our repositories
+one of our repositories userRepository.findUserInfo(id) and trackingRepository.findTrackingInfo(id).
+
+```kotlin
+val userInfo = CoroutineUtils.runAsync { userRepository.findUserInfo(id) }
+val trackingInfo = CoroutineUtils.runAsync { trackingRepository.findTrackingInfo(id) }
+```
+If you look closely now the function getProfile does not have runBlocking and we do not need return@runBlocking and it is because we are handling our own scope.
+we are handling our own coroutine scope.
+
+It is time to run our program.
+
+```kotlin
+suspend fun main() {
+    val sequentialTime = measureTimeMillis {
+        SequentialApproach().getProfile(1).apply { println(this) }
+    }
+    println("SequentialTime : $sequentialTime")
+
+    val concurrentTime = measureTimeMillis {
+        ConcurrentApproach().getProfile(1).apply { println(this) }
+    }
+
+    println("ConcurrentTime : $concurrentTime")
+
+    val structuredTime = measureTimeMillis {
+        // Init instances
+        val profileService = ProfileService(UserRepository(), TrackingRepository())
+        // Call the service
+        profileService.getProfile(id = 1).also { println(it) }
+    }
+    println("StructuredTime : $structuredTime")
+}
+```
+
+Print
+```kotlin
+
+// Profile@7c0e2abd
+// SequentialTime : 3018
+// Profile@6b57696f
+// ConcurrentTime : 1561
+// Profile@25cc8e0a
+// StructuredTime : 1538
+```
+Congratulations. If we compare ConcurrentTime : 1561 with StructuredTime : 1538 the times are similar.
+
+Will it be a good approach to have a single scope and run all the coroutines there? Of course not, now let's
+customize our example a little.
+
+First we are going to make some modifications to our CoroutineUtils class
+
+```kotlin
+object CoroutineUtils {
+    private val defaultScope = CoroutineScope(Dispatchers.IO + CoroutineName("General Purpose")) // Default scope
+    suspend fun <T> runAsync(coroutineScope: CoroutineScope = defaultScope, block: suspend () -> T) = coroutineScope.async {
+        println("${this.coroutineContext[CoroutineName.Key]} is executing in ${Thread.currentThread().name}")
+        block() }
+}
+```
+As you can see our runAsync function receives by parameter a coroutineScope and takes defaultScope by default in case we do not specify any scope.
+
+We also add for debugging purposes.
+```kotlin
+println("${this.coroutineContext[CoroutineName.Key]} is executing in ${Thread.currentThread().name}")
+```
+
+With the above modification in ProfileService we can manage our own scope if we wish. For debugging purposes we are going to launch the function userRepository.findUserInfo(id) function with our custom scope and
+trackingRepository.findTrackingInfo(id) under the default scope. Let's see how it works.
+
+```kotlin
+class ProfileService(private val userRepository: UserRepository, private val trackingRepository: TrackingRepository) {
+
+    private val scope = CoroutineScope(Dispatchers.IO + CoroutineName("Service")) // this is optional, but you can create you own scope
+
+    suspend fun getProfile(id: Int): Profile {
+        val userInfo = CoroutineUtils.runAsync(scope) { userRepository.findUserInfo(id) }
+        val trackingInfo = CoroutineUtils.runAsync { trackingRepository.findTrackingInfo(id) }
+        return Profile(userinfo = userInfo.await(), trackingInfo = trackingInfo.await())
+    }
+}
+```
+
+Let's run our program again.
+
+```kotlin
+// Profile@7c0e2abd
+// SequentialTime : 3028
+// Profile@6b57696f
+// ConcurrentTime : 1585
+// CoroutineName(Service) is executing in DefaultDispatcher-worker-1
+// CoroutineName(General Purpose) is executing in DefaultDispatcher-worker-2
+// Profile@2ddab2e3
+// StructuredTime : 1548
+```
+
+As you can see in the lines:
+
+```kotlin
+// CoroutineName(Service) is executing in DefaultDispatcher-worker-1
+// CoroutineName(General Purpose) is executing in DefaultDispatcher-worker-2
+```
+Our suspension functions are running with different scopes and in different threads.
+
+
+
+
 
 
 
