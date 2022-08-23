@@ -53,10 +53,12 @@ fun main() {
 }
 ```
 Print:
-Profile(userinfo=UserInfo(name=Luis, lastName=Foo), trackingInfo=TrackingInfo(webSites=[vercel.com, devlach.com]))
-SequentialTime : 3002
+```kotlin
+// Profile(userinfo=UserInfo(name=Luis, lastName=Foo), trackingInfo=TrackingInfo(webSites=[vercel.com, devlach.com]))
+// SequentialTime : 3002
+```
 
-As you can see our program took 3002 milliseconds. But we were not happy with that time and we were able to identify that if we could get the user and tracking information in a concurrent way it would help our program to be faster.
+As you can see our program took 3002 milliseconds to complete. Umm that time is good, but if we could get the user and tracking information concurrently it would help our program go faster.
 
 Let's take the first asynchronous approach:
 
@@ -96,24 +98,25 @@ suspend fun main() {
 }
 ```
 Print:
-Profile(userinfo=UserInfo(name=Luis, lastName=Foo), trackingInfo=TrackingInfo(webSites=[vercel.com, devlach.com]))
-SequentialTime : 3002
+```kotlin
+// Profile(userinfo=UserInfo(name=Luis, lastName=Foo), trackingInfo=TrackingInfo(webSites=[vercel.com, devlach.com]))
+// SequentialTime : 3002
+// Profile(userinfo=UserInfo(name=Luis, lastName=Foo), trackingInfo=TrackingInfo(webSites=[vercel.com, devlach.com]))
+// ConcurrentTime : 1549
+```
 
-Profile(userinfo=UserInfo(name=Luis, lastName=Foo), trackingInfo=TrackingInfo(webSites=[vercel.com, devlach.com]))
-ConcurrentTime : 1549
-
-Now it's better, as we see ConcurrentTime : 1549, but how could we improve our processing time... That's because of the coroutines, let's see what changes we made.
+Now it's better, as we see *ConcurrentTime : 1549*, but how can we improve our processing time?... That's because of the coroutines, let's see what changes we made.
 
 First our business functions:
-*findUserInfo*, *findTrackingInfo* and *getProfile* are now marked as **suspend** functions, but this is because instead of using *Thread.sleep* we use *delay* (This function delays coroutine for a given time without blocking a thread and resumes it after a specified time), which being a suspend function then the function that uses it must also be a suspend function.
+*findUserInfo*, *findTrackingInfo* and *getProfile* are now marked as **suspend** functions, but this is because instead of using *Thread.sleep* we use **delay** (*This function delays coroutine for a given time without blocking a thread and resumes it after a specified time*), which being a suspend function then the function that uses it must also be a suspend function.
 
-On the other hand we see something different in getProfile, now we make our functions findUserInfo and findTrackingInfo to be inside launch{....} and with this we tell it to execute concurrently.
+On the other hand we see something different in *getProfile*, now we make our functions *findUserInfo* and *findTrackingInfo* to be inside async{....} and with this we tell it to execute concurrently.
 
 ```kotlin
 val user = async { findUserInfo(id) }
 val trackingInfo = async { findTrackingInfo(id) }
 ```
-Finally, to obtain both results we call **await** (Awaits for completion of this value without blocking a thread and resumes when deferred computation is complete).
+Finally, to obtain both results we call **await** (*Awaits for completion of this value without blocking a thread and resumes when deferred computation is complete*).
 We can also see the **runBlocking** function which is nothing more than a coroutine builder.
 
 As I'm a bit picky about my code structure and organization, we'll try to improve this example. 
@@ -141,7 +144,7 @@ suspend function with async.
 ```kotlin
 object CoroutineUtils {
     private val defaultScope = CoroutineScope(Dispatchers.IO + CoroutineName("General Purpose")) // Default scope
-    suspend fun <T> runAsync( block: suspend () -> T) = defaultScope.async { block() }
+    suspend fun <T> runAsync( block: suspend () -> T) = defaultScope.async { block() } // Receive a suspend function and executes it in our custom scope
 }
 ```
 
@@ -158,15 +161,13 @@ class ProfileService(private val userRepository: UserRepository, private val tra
 }
 ```
 
-ProfileService receives both repositories via contructor and now we can see our business functions that are called by each one of our repositories
-one of our repositories userRepository.findUserInfo(id) and trackingRepository.findTrackingInfo(id).
+ProfileService receives both repositories via contructor and now we can see our business functions that are called by each one of our repositories *userRepository.findUserInfo(id)* and *trackingRepository.findTrackingInfo(id)*.
 
 ```kotlin
 val userInfo = CoroutineUtils.runAsync { userRepository.findUserInfo(id) }
 val trackingInfo = CoroutineUtils.runAsync { trackingRepository.findTrackingInfo(id) }
 ```
-If you look closely now the function getProfile does not have runBlocking and we do not need return@runBlocking and it is because we are handling our own scope.
-we are handling our own coroutine scope.
+If you look closely now the function *getProfile* does not have *runBlocking* and we do not need *return@runBlocking* and it is because we are handling our own scope.
 
 It is time to run our program.
 
@@ -203,30 +204,30 @@ Print
 // Profile@25cc8e0a
 // StructuredTime : 1538
 ```
-Congratulations. If we compare ConcurrentTime : 1561 with StructuredTime : 1538 the times are similar.
+Congratulations. If we compare *ConcurrentTime : 1561* with *StructuredTime : 1538* the times are similar.
 
 Will it be a good approach to have a single scope and run all the coroutines there? Of course not, now let's
 customize our example a little.
 
-First we are going to make some modifications to our CoroutineUtils class
+First we are going to make some modifications to our *CoroutineUtils* class
 
 ```kotlin
 object CoroutineUtils {
     private val defaultScope = CoroutineScope(Dispatchers.IO + CoroutineName("General Purpose")) // Default scope
-    suspend fun <T> runAsync(coroutineScope: CoroutineScope = defaultScope, block: suspend () -> T) = coroutineScope.async {
-        println("${this.coroutineContext[CoroutineName.Key]} is executing in ${Thread.currentThread().name}")
-        block() }
+    suspend fun <T> runAsync(coroutineScope: CoroutineScope = defaultScope, block: suspend () -> T) = coroutineScope.async { // Receive a suspend function and executes it in our custom scope
+        println("${this.coroutineContext[CoroutineName.Key]} is executing in ${Thread.currentThread().name}") // Print current coroutine name and thread name
+        block() } 
 }
 ```
-As you can see our runAsync function receives by parameter a coroutineScope and takes defaultScope by default in case we do not specify any scope.
+As you can see our runAsync function receives by parameter a *coroutineScope* and takes *defaultScope* by default in case we do not specify any scope.
 
 We also add for debugging purposes.
 ```kotlin
 println("${this.coroutineContext[CoroutineName.Key]} is executing in ${Thread.currentThread().name}")
 ```
 
-With the above modification in ProfileService we can manage our own scope if we wish. For debugging purposes we are going to launch the function userRepository.findUserInfo(id) function with our custom scope and
-trackingRepository.findTrackingInfo(id) under the default scope. Let's see how it works.
+With the above modification in *ProfileService* we can manage our own scope if we wish. For debugging purposes we are going to launch the function *userRepository.findUserInfo(id)* function with our custom scope and
+*trackingRepository.findTrackingInfo(id)* under the default scope. Let's see how it works.
 
 ```kotlin
 class ProfileService(private val userRepository: UserRepository, private val trackingRepository: TrackingRepository) {
